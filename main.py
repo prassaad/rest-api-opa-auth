@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Security, HTTPException
+from fastapi import FastAPI, Response, Security, HTTPException
 from utils import VerifyToken
 from models import TrainingPayload
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.requests import Request
 
 app = FastAPI()
 
@@ -47,15 +48,29 @@ def private(auth_result: str = Security(auth.verify)):
     """A valid access token is required to access this route"""
     return auth_result
 
+# Implement tenant-based routing 
+@app.get("/{tenant_id}/documents")
+async def documents(tenant_id: str,auth_result: str = Security(auth.verify)):
+    data = "documents"
+    return {"data": data}
+
+@app.post("/upload")
+def upload(request: Request):
+    body = b''
+    file = request.form.files.get("file") 
+    if not file:
+        raise HTTPException(status_code=400, detail="No file provided")
+    dz_uuid = request.form.get("dzuuid")
+    return dz_uuid
 
 @app.get("/api/private-scoped")
 def private_scoped(auth_result: str = Security(auth.verify, scopes=['read:messages'])):
     """A valid access token and an appropriate scope are required to access
     this route
     """
-
     return auth_result
 
+ 
 @app.post("/trainings/create")
 async def create_training(training : TrainingPayload)  -> dict[str, str]:
     if training is None :
